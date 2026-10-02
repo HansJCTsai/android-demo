@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">TTI Factory</string>
-    <string name="header">Version 1.0.5</string>
+    <string name="header">Version 1.0.6</string>
     <string name="title">DevOps Demo</string>
-    <string name="banner">這個 APK 是由 GitHub Actions 自動建置的</string>
+    <string name="banner">這個 APK 是由 GitHub Actions 自動建置的 V1.0.6</string>
     <string name="version_format">版本：%1$s\nCommit：%2$s</string>
     <string name="check_update">檢查更新</string>
     <string name="update_checking">檢查更新中…</string>
