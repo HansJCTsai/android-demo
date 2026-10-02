@@ -27,10 +27,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # 使用專案自己的 Gradle Wrapper（gradlew），版本由 gradle/wrapper/gradle-wrapper.properties 決定，
+      # 才會和 Android Studio 本機建置的 Gradle 版本一致
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
       # 選用：有設定 KEYSTORE_B64 就用 Secrets 的正式金鑰；沒設定就用 repo 內的 Demo 金鑰（ci/demo-signing.p12）
       - name: Restore signing key (optional)
@@ -51,7 +54,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           UPDATE_BASE_URL: ${{ vars.UPDATE_BASE_URL }}   # 未設定 = 使用 GitHub Release 最新版網址
-        run: gradle lintRelease assembleRelease --no-daemon
+        run: ./gradlew lintRelease assembleRelease --no-daemon
 
       - name: Rename APK & create version.json
         run: |
