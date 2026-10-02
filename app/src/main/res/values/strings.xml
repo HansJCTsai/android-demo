@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">TTI PDA</string>
-    <string name="header">TTI PDA DevOps Demo</string>
-    <string name="title">PDA DevOps Demo</string>
+    <string name="app_name">TTI Factory</string>
+    <string name="header"></string>
+    <string name="title">DevOps Demo</string>
     <string name="banner">這個 APK 是由 GitHub Actions 自動建置的</string>
     <string name="version_format">版本：%1$s\nCommit：%2$s</string>
     <string name="check_update">檢查更新</string>
