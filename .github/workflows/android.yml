@@ -1,0 +1,86 @@
+name: Build factory APK
+
+# push 到 main（且有改到 app/ 底下的檔案）就自動建置 APK 並發佈到 GitHub Release
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', 'ci/**', '*.gradle.kts']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 建立 Release 需要
+
+concurrency:
+  group: android-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      # 選用：有設定 KEYSTORE_B64 就用 Secrets 的正式金鑰；沒設定就用 repo 內的 Demo 金鑰（ci/demo-signing.p12）
+      - name: Restore signing key (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/factory.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/factory.jks" >> "$GITHUB_ENV"
+            echo "使用 Secrets 內的正式簽章金鑰"
+          else
+            echo "未設定 KEYSTORE_B64，使用 repo 內的 Demo 簽章金鑰 (ci/demo-signing.p12)"
+          fi
+
+      - name: Build release APK (含 Lint 檢查)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          UPDATE_BASE_URL: ${{ vars.UPDATE_BASE_URL }}   # 未設定 = 使用 GitHub Release 最新版網址
+        run: gradle lintRelease assembleRelease --no-daemon
+
+      - name: Rename APK & create version.json
+        run: |
+          VERSION="1.0.${GITHUB_RUN_NUMBER}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          cp app/build/outputs/apk/release/app-release.apk "factory-demo-v${VERSION}.apk"
+          # App 啟動時會讀這個檔案判斷是否有新版
+          cat > version.json <<JSON
+          {
+            "versionCode": ${GITHUB_RUN_NUMBER},
+            "versionName": "${VERSION}",
+            "apkUrl": "factory-demo-v${VERSION}.apk",
+            "commit": "${GITHUB_SHA::7}"
+          }
+          JSON
+          cat version.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: factory-demo-v${{ env.VERSION }}
+          path: |
+            factory-demo-v${{ env.VERSION }}.apk
+            version.json
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" "factory-demo-v${VERSION}.apk" version.json --latest \
+            --title "工廠 Demo v${VERSION}" \
+            --notes "Commit: ${GITHUB_SHA::7}  $(git log -1 --pretty=%s)"
